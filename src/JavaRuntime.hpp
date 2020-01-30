@@ -4,6 +4,7 @@
 #include "Stdlib.hpp"
 
 #include "JniFunction.hpp"
+#include "Macros.hpp"
 
 namespace java
 {
@@ -42,98 +43,190 @@ namespace java
             bool CreateJVM();
 
             template<typename return_t, typename ...args_t>
-            bool CallJavaMethod(return_t& result, JavaObject javaClass, std::string const& methodName, jobject object, args_t... args)
-            {
-                jclass _class = m_environment->FindClass(javaClass.signature.c_str());
-
-                if (!_class)
-                {
-                    SpitJniError();
-
-                    std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.signature.c_str());
-                    return false;
-                }
-
-                std::string methodArgs;
-                methodArgs = MakeMethodArgs(methodArgs, args...);
-
-                std::string signature = '(' + methodArgs + ')' + TypeToJniStr(result);
-
-                jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
-
-                if (!methodId)
-                {
-                    SpitJniError();
-                    std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.signature.c_str(), methodName.c_str());
-                    return false;
-                }
-
-                return true;
-            }
-
+            bool CallJavaMethod(return_t& result, JavaObject javaClass, std::string const& methodName, jobject object, args_t... args);
             template<typename return_t>
-            bool CallJavaMethod(return_t& result, JavaObject javaClass, std::string const& methodName, jobject object)
-            {
-                jclass _class = m_environment->FindClass(javaClass.signature.c_str());
+            bool CallJavaMethod(return_t& result, JavaObject javaClass, std::string const& methodName, jobject object);
 
-                if (!_class)
-                {
-                    SpitJniError();
+            template<typename return_t, typename ...args_t>
+            bool CallJavaVoidMethod(JavaObject javaClass, std::string const& methodName, jobject object, args_t... args);
 
-                    std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.signature.c_str());
-                    return false;
-                }
+            template<typename return_t, typename ...args_t>
+            bool CallJavaObjectMethod(return_t& result, JavaObject javaClass, std::string const& methodName, jobject object, args_t... args);
 
-                std::string signature = "()" + TypeToJniStr(result);
+            template<typename return_t, typename ...args_t>
+            bool CallJavaStringMethod(std::string& result, JavaObject javaClass, std::string const& methodName, jobject object,args_t... args);
 
-                jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
+            CALL_JAVA_METHOD(Int);
+            CALL_JAVA_METHOD(Short);
+            CALL_JAVA_METHOD(Long);
+            CALL_JAVA_METHOD(Char);
+            CALL_JAVA_METHOD(Byte);
+            CALL_JAVA_METHOD(Float);
+            CALL_JAVA_METHOD(Double);
 
-                if (!methodId)
-                {
-                    SpitJniError();
-                    std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.signature.c_str(), methodName.c_str());
-                    return false;
-                }
+            template<typename return_t, typename ...args_t>
+            bool CallJavaStaticVoidMethod(JavaObject javaClass, std::string const& methodName, args_t... args);
 
-                m_environment->CallVoidMethod(object, methodId);
+            template<typename return_t, typename ...args_t>
+            bool CallJavaStaticObjectMethod(return_t& result, JavaObject javaClass, std::string const& methodName, args_t... args);
 
-                return true;
-            }
+            template<typename return_t, typename ...args_t>
+            bool CallJavaStaticStringMethod(return_t& result, JavaObject javaClass, std::string const& methodName, args_t... args);
 
-            jobject GetObjectMethod()
-            {
-                jclass _class = m_environment->FindClass("jar/lib/TestBeacon");
+            CALL_STATIC_JAVA_METHOD(Int);
+            CALL_STATIC_JAVA_METHOD(Short);
+            CALL_STATIC_JAVA_METHOD(Long);
+            CALL_STATIC_JAVA_METHOD(Char);
+            CALL_STATIC_JAVA_METHOD(Byte);
+            CALL_STATIC_JAVA_METHOD(Float);
+            CALL_STATIC_JAVA_METHOD(Double);
 
-                if (!_class)
-                {
-                    SpitJniError();
-
-                    std::fprintf(stderr, "Failed to find java class: %s!\n", "jar/lib/TestBeacon");
-                    return nullptr;
-                }
-
-                std::string signature = "(I)Ljar/lib/TestBeacon;";
-
-                jmethodID methodId = m_environment->GetStaticMethodID(_class, "NewBeacon", signature.c_str());
-
-                if (!methodId)
-                {
-                    SpitJniError();
-                    std::fprintf(stderr, "Failed to find java method: BEACON!\n");
-                    return nullptr;
-                }
-
-                jobject beacon = m_environment->CallStaticObjectMethod(_class, methodId, jint(10));
-                m_environment->NewGlobalRef(beacon);
-
-                if (!beacon)
-                {
-                    SpitJniError();
-                    std::fprintf(stderr, "Failed to find java method: BEACON!\n");
-                    return nullptr;
-                }
-
-                return beacon;
-            }
+            jobject GetObjectMethod();
+           
     };
+
+    template<typename return_t, typename ...args_t>
+    inline bool JavaRuntime::CallJavaMethod(return_t& result, JavaObject javaClass, std::string const& methodName, jobject object, args_t ...args)
+    {
+        jclass _class = m_environment->FindClass(javaClass.classpath.c_str());
+
+        if (!_class)
+        {
+            SpitJniError();
+
+            std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.classpath.c_str());
+            return false;
+        }
+
+        std::string methodArgs = MakeMethodArgsJniString(methodArgs, args...);
+        std::string signature = '(' + methodArgs + ')' + TypeToJniStr(result);
+
+        jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
+
+        if (!methodId)
+        {
+            SpitJniError();
+            std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.classpath.c_str(), methodName.c_str());
+            return false;
+        }
+
+        return true;
+    }
+
+    template<typename return_t>
+    inline bool JavaRuntime::CallJavaMethod(return_t& result, JavaObject javaClass, std::string const& methodName, jobject object)
+    {
+        jclass _class = m_environment->FindClass(javaClass.classpath.c_str());
+
+        if (!_class)
+        {
+            SpitJniError();
+
+            std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.classpath.c_str());
+            return false;
+        }
+
+        std::string signature = "()" + TypeToJniStr(result);
+        jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
+
+        if (!methodId)
+        {
+            SpitJniError();
+            std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.classpath.c_str(), methodName.c_str());
+            return false;
+        }
+
+        m_environment->CallVoidMethod(object, methodId);
+
+        return true;
+    }
+    
+    template<typename return_t, typename ...args_t>
+    inline bool JavaRuntime::CallJavaVoidMethod(JavaObject javaClass, std::string const& methodName, jobject object, args_t... args)
+    {
+        jclass _class = m_environment->FindClass(javaClass.classpath.c_str());
+
+        if (!_class)
+        {
+            SpitJniError();
+
+            std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.classpath.c_str());
+            return false;
+        }
+
+        std::string signature = "()" + TypeToJniStr(result);
+        jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
+
+        if (!methodId)
+        {
+            SpitJniError();
+            std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.classpath.c_str(), methodName.c_str());
+            return false;
+        }
+
+        m_environment->CallVoidMethod(object, methodId);
+        SpitJniError();
+
+        return true;
+    }
+
+    template<typename return_t, typename ...args_t>
+    inline bool JavaRuntime::CallJavaStringMethod(std::string& result, JavaObject javaClass, std::string const& methodName, jobject object, args_t... args)
+    {
+        jclass _class = m_environment->FindClass(javaClass.classpath.c_str());
+
+        if (!_class)
+        {
+            SpitJniError();
+
+            std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.classpath.c_str());
+            return false;
+        }
+
+        std::string signature = "()" + TypeToJniStr(result);
+        jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
+
+        if (!methodId)
+        {
+            SpitJniError();
+            std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.classpath.c_str(), methodName.c_str());
+            return false;
+        }
+
+        jstring javaString = m_environment->CallObjectMethod(object, methodId, args...);
+        SpitJniError();
+
+        m_environment;
+
+        return true;
+    }
+
+    template<typename return_t, typename ...args_t>
+    inline bool JavaRuntime::CallJavaStaticVoidMethod(JavaObject javaClass, std::string const& methodName, args_t... args)
+    {
+        jclass _class = m_environment->FindClass(javaClass.classpath.c_str());
+
+        if (!_class)
+        {
+            SpitJniError();
+
+            std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.classpath.c_str());
+            return false;
+        }
+
+        std::string signature = "()" + TypeToJniStr(result);
+        jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
+
+        if (!methodId)
+        {
+            SpitJniError();
+            std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.classpath.c_str(), methodName.c_str());
+            return false;
+        }
+
+        m_environment->CallStaticVoidMethod(_class, methodId);
+        SpitJniError();
+
+        return true;
+    }
 }

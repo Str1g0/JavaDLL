@@ -58,6 +58,44 @@ bool java::JavaRuntime::CreateJVM()
     return true;
 }
 
+jobject java::JavaRuntime::GetObjectMethod()
+{
+    {
+        jclass _class = m_environment->FindClass("jar/lib/TestBeacon");
+
+        if (!_class)
+        {
+            SpitJniError();
+
+            std::fprintf(stderr, "Failed to find java class: %s!\n", "jar/lib/TestBeacon");
+            return nullptr;
+        }
+
+        std::string signature = "(I)Ljar/lib/TestBeacon;";
+
+        jmethodID methodId = m_environment->GetStaticMethodID(_class, "NewBeacon", signature.c_str());
+
+        if (!methodId)
+        {
+            SpitJniError();
+            std::fprintf(stderr, "Failed to find java method: BEACON!\n");
+            return nullptr;
+        }
+
+        jobject beacon = m_environment->CallStaticObjectMethod(_class, methodId, jint(10));
+        m_environment->NewGlobalRef(beacon);
+
+        if (!beacon)
+        {
+            SpitJniError();
+            std::fprintf(stderr, "Failed to find java method: BEACON!\n");
+            return nullptr;
+        }
+
+        return beacon;
+    }
+}
+
 java::JavaRuntime::JavaRuntime(jint version, std::vector<std::string> jarPaths):
     m_javaVersion(version),
     m_jarsToLoad(jarPaths)

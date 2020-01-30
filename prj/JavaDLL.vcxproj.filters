@@ -4,6 +4,7 @@
     <ClInclude Include="..\src\Stdlib.hpp" />
     <ClInclude Include="..\src\JavaRuntime.hpp" />
     <ClInclude Include="..\src\JniFunction.hpp" />
+    <ClInclude Include="..\src\Macros.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Main.cpp" />

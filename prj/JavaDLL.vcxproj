@@ -147,6 +147,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\src\JniFunction.hpp" />
+    <ClInclude Include="..\src\Macros.hpp" />
     <ClInclude Include="..\src\Stdlib.hpp" />
     <ClInclude Include="..\src\JavaRuntime.hpp" />
   </ItemGroup>

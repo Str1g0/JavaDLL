@@ -44,7 +44,12 @@ namespace java
 
     template<>
     std::string TypeToJniStr<JavaObject>(JavaObject value) {
-        return 'L' + value.signature + ';';
+        return 'L' + value.classpath + ';';
+    }
+
+    template<>
+    std::string TypeToJniStr<jstring>(jstring value) {
+        return "L/java/lang/String;";
     }
 
     template<>
