@@ -1,17 +1,16 @@
 #pragma once
 
-
 #define CALL_JAVA_METHOD(returnType)                                                                                                                    \
 template<typename return_t, typename ...args_t>                                                                                                         \
-inline bool CallJava ## returnType ## Method (return_t& result, JavaObject javaClass, std::string const& methodName, jobject object, args_t ...args)    \
+inline bool CallJava ## returnType ## Method (return_t& result, ClassPath javaClass, std::string const& methodName, jobject object, args_t ...args)     \
 {                                                                                                                                                       \
-    jclass _class = m_environment->FindClass(javaClass.classpath.c_str());                                                                              \
+    jclass _class = m_environment->FindClass(javaClass.asString.c_str());                                                                               \
                                                                                                                                                         \
     if (!_class)                                                                                                                                        \
     {                                                                                                                                                   \
         SpitJniError();                                                                                                                                 \
                                                                                                                                                         \
-        std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.classpath.c_str());                                                          \
+        std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.asString.c_str());                                                           \
         return false;                                                                                                                                   \
     }                                                                                                                                                   \
                                                                                                                                                         \
@@ -23,7 +22,7 @@ inline bool CallJava ## returnType ## Method (return_t& result, JavaObject javaC
     if (!methodId)                                                                                                                                      \
     {                                                                                                                                                   \
         SpitJniError();                                                                                                                                 \
-        std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.classpath.c_str(), methodName.c_str());                                  \
+        std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.asString.c_str(), methodName.c_str());                                   \
         return false;                                                                                                                                   \
     }                                                                                                                                                   \
                                                                                                                                                         \
@@ -36,15 +35,15 @@ inline bool CallJava ## returnType ## Method (return_t& result, JavaObject javaC
 
 #define CALL_STATIC_JAVA_METHOD(returnType)                                                                                                             \
 template<typename return_t, typename ...args_t>                                                                                                         \
-inline bool CallJavaStatic ## returnType ## Method   (return_t& result, JavaObject javaClass, std::string const& methodName, args_t ...args)            \
+inline bool CallJavaStatic ## returnType ## Method   (return_t& result, ClassPath javaClass, std::string const& methodName, args_t ...args)             \
 {                                                                                                                                                       \
-    jclass _class = m_environment->FindClass(javaClass.classpath.c_str());                                                                              \
+    jclass _class = m_environment->FindClass(javaClass.asString.c_str());                                                                               \
                                                                                                                                                         \
     if (!_class)                                                                                                                                        \
     {                                                                                                                                                   \
         SpitJniError();                                                                                                                                 \
                                                                                                                                                         \
-        std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.classpath.c_str());                                                          \
+        std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.asString.c_str());                                                           \
         return false;                                                                                                                                   \
     }                                                                                                                                                   \
                                                                                                                                                         \
@@ -56,7 +55,7 @@ inline bool CallJavaStatic ## returnType ## Method   (return_t& result, JavaObje
     if (!methodId)                                                                                                                                      \
     {                                                                                                                                                   \
         SpitJniError();                                                                                                                                 \
-        std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.classpath.c_str(), methodName.c_str());                                  \
+        std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.asString.c_str(), methodName.c_str());                                   \
         return false;                                                                                                                                   \
     }                                                                                                                                                   \
                                                                                                                                                         \

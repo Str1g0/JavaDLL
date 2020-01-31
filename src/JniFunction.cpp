@@ -43,22 +43,32 @@ namespace java
     }
 
     template<>
-    std::string TypeToJniStr<JavaObject>(JavaObject value) {
-        return 'L' + value.classpath + ';';
+    std::string TypeToJniStr<ClassPath>(ClassPath value) {
+        return 'L' + value.asString + ';';
+    }
+
+    template<>
+    std::string TypeToJniStr<jobject>(jobject value) {
+        return "Ljava/lang/Object";
     }
 
     template<>
     std::string TypeToJniStr<jstring>(jstring value) {
-        return "L/java/lang/String;";
+        return "Ljava/lang/String;";
     }
 
     template<>
     std::string TypeToJniStr<std::string>(std::string value) {
-        return "L/java/lang/String;";
+        return "Ljava/lang/String;";
     }
 
     template<>
     std::string TypeToJniStr<cstring>(cstring value) {
-        return "L/java/lang/String;";
+        return "Ljava/lang/String;";
+    }
+
+    std::string MakeMethodArgsJniString()
+    {
+        return "";
     }
 }

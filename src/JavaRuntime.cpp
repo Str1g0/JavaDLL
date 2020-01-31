@@ -20,9 +20,9 @@ void java::JavaRuntime::SetupArgs()
 
     classPath.optionString = const_cast<char*>(m_classOption.c_str());
 
-    memMin.optionString = (char*)"-Xms1m";  //1mb
-    memMax.optionString = (char*)"-Xms1g";  //1gb
-    verbose.optionString = (char*)"-verbose:jni";
+    memMin.optionString     = (char*)"-Xms1m";  //1mb
+    memMax.optionString     = (char*)"-Xms1g";  //1gb
+    verbose.optionString    = (char*)"-verbose:jni";
 
     m_options.push_back(classPath);
     m_options.push_back(memMin);
@@ -37,8 +37,10 @@ void java::JavaRuntime::SetupArgs()
 
 void java::JavaRuntime::SpitJniError()
 {
-    if (m_environment && (m_environment)->ExceptionOccurred()) {
+    if (m_environment && (m_environment)->ExceptionOccurred()) 
+    {
         (m_environment)->ExceptionDescribe();
+        //throw JavaError("A java exception has occured!");
     }
 }
 
@@ -58,47 +60,33 @@ bool java::JavaRuntime::CreateJVM()
     return true;
 }
 
-jobject java::JavaRuntime::GetObjectMethod()
-{
-    {
-        jclass _class = m_environment->FindClass("jar/lib/TestBeacon");
-
-        if (!_class)
-        {
-            SpitJniError();
-
-            std::fprintf(stderr, "Failed to find java class: %s!\n", "jar/lib/TestBeacon");
-            return nullptr;
-        }
-
-        std::string signature = "(I)Ljar/lib/TestBeacon;";
-
-        jmethodID methodId = m_environment->GetStaticMethodID(_class, "NewBeacon", signature.c_str());
-
-        if (!methodId)
-        {
-            SpitJniError();
-            std::fprintf(stderr, "Failed to find java method: BEACON!\n");
-            return nullptr;
-        }
-
-        jobject beacon = m_environment->CallStaticObjectMethod(_class, methodId, jint(10));
-        m_environment->NewGlobalRef(beacon);
-
-        if (!beacon)
-        {
-            SpitJniError();
-            std::fprintf(stderr, "Failed to find java method: BEACON!\n");
-            return nullptr;
-        }
-
-        return beacon;
-    }
-}
 
 java::JavaRuntime::JavaRuntime(jint version, std::vector<std::string> jarPaths):
     m_javaVersion(version),
     m_jarsToLoad(jarPaths)
 {
     CreateJVM();
+}
+
+java::JavaError::JavaError(std::string const& what):
+    std::runtime_error(what)
+{
+}
+
+jobject java::JavaRuntime::CreateNewObject(ClassPath obj)
+{
+    jclass _class = m_environment->FindClass(obj.asString.c_str());
+
+    if (!_class)
+    {
+        SpitJniError();
+
+        std::fprintf(stderr, "Failed to find java class: %s!\n", obj.asString.c_str());
+        return nullptr;
+    }
+
+    jobject newObject = m_environment->AllocObject(_class);
+    SpitJniError();
+
+    return newObject;
 }

@@ -5,8 +5,8 @@
 
 namespace java
 {
-    struct JavaObject  {
-        std::string classpath;
+    struct ClassPath  {
+        std::string asString;
     };
 
     static enum jvoid_t {} jvoid;
@@ -45,7 +45,7 @@ namespace java
     std::string TypeToJniStr<jdouble>(jdouble value);
 
     template<>
-    std::string TypeToJniStr<JavaObject>(JavaObject value);
+    std::string TypeToJniStr<ClassPath>(ClassPath value);
 
     template<>
     std::string TypeToJniStr<jstring>(jstring value);
@@ -59,27 +59,30 @@ namespace java
     template<typename T>
     std::string TypeToJniStr(std::vector<T> const& value);
 
-    template<typename T, typename ...args_t>
-    std::string MakeMethodArgsJniString(T current, args_t... args)
-    {
-        std::string methodArgs{""};
-        return MakeMethodArgs(methodArgs, current, args...);
-    }
-
-    template<typename T, typename ...args_t>
-    std::string MakeMethodArgs(std::string& toAdd, T current, args_t... args)
-    {
-        toAdd += TypeToJniStr(current);
-        return MakeMethodArgs(args...);
-    }
-
-    template<typename T, typename ...args_t>
+    template<typename T>
     std::string MakeMethodArgs(std::string& toAdd, T last)
     {
         toAdd += TypeToJniStr(last);
         return toAdd;
     }
 
+    template<typename T, typename ...args_t>
+    std::string MakeMethodArgs(std::string& toAdd, T current, args_t... args)
+    {
+        toAdd += TypeToJniStr(current);
+        return MakeMethodArgs(toAdd, args...);
+    }
+
+    template<typename ...args_t>
+    std::string MakeMethodArgsJniString(args_t... args)
+    {
+        std::string methodArgs{""};
+        return MakeMethodArgs(methodArgs, args...);
+    }
+
+    //for void expansion
+    std::string MakeMethodArgsJniString();
+    
     template<typename T>
     std::string TypeToJniStr(std::vector<T> const& value)
     {
