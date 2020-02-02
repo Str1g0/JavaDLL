@@ -3,6 +3,12 @@
 namespace java
 {
     template<>
+    jobject java::MakeJavaType(JavaObject param)
+    {
+        return param.object;
+    }
+
+    template<>
     std::string TypeToJniStr<jvoid_t>(jvoid_t value) {
         return "V";
     }
@@ -49,7 +55,13 @@ namespace java
 
     template<>
     std::string TypeToJniStr<jobject>(jobject value) {
-        return "Ljava/lang/Object";
+        return "Ljava/lang/Object;";
+    }
+
+    template<>
+    std::string TypeToJniStr(JavaObject value)
+    {
+        return TypeToJniStr(value.path);
     }
 
     template<>

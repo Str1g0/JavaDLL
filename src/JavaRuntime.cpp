@@ -10,7 +10,7 @@ void java::JavaRuntime::SetupArgs()
         m_classOption += *jar;
 
         if(jar + 1 != m_jarsToLoad.end())
-            m_classOption += ':';
+            m_classOption += ';';
     }
 
     JavaVMOption classPath;
@@ -20,7 +20,7 @@ void java::JavaRuntime::SetupArgs()
 
     classPath.optionString = const_cast<char*>(m_classOption.c_str());
 
-    memMin.optionString     = (char*)"-Xms1m";  //1mb
+    memMin.optionString     = (char*)"-Xms512m";  //512mb
     memMax.optionString     = (char*)"-Xms1g";  //1gb
     verbose.optionString    = (char*)"-verbose:jni";
 
@@ -39,7 +39,8 @@ void java::JavaRuntime::SpitJniError()
 {
     if (m_environment && (m_environment)->ExceptionOccurred()) 
     {
-        (m_environment)->ExceptionDescribe();
+        m_environment->ExceptionDescribe();
+        m_environment->ExceptionClear();
         //throw JavaError("A java exception has occured!");
     }
 }
@@ -60,6 +61,86 @@ bool java::JavaRuntime::CreateJVM()
     return true;
 }
 
+jstring java::JavaRuntime::MakeJavaString(std::string const& in)
+{
+    if (m_environment)
+        return m_environment->NewStringUTF(in.c_str());
+
+    return nullptr;
+}
+
+bool java::JavaRuntime::CallMain(ClassPath mainClass)
+{
+    jclass _class = m_environment->FindClass(mainClass.asString.c_str());
+
+    if (!_class)
+    {
+        SpitJniError();
+
+        std::fprintf(stderr, "Failed to find java class: %s!\n", mainClass.asString.c_str());
+        return false;
+    }
+
+    jmethodID methodId = m_environment->GetStaticMethodID(_class, "main", "([Ljava/lang/String;)V");
+    if (!methodId)
+    {
+        SpitJniError();
+
+        std::fprintf(stderr, "Failed to find java method: %s.%s!\n", mainClass.asString.c_str(), "main");
+        return false;
+    }
+
+    jobjectArray args = (jobjectArray)m_environment->NewObjectArray(0,
+        m_environment->FindClass("java/lang/String"),
+        m_environment->NewStringUTF(""));
+
+    m_environment->CallStaticVoidMethod(_class, methodId, args);
+    SpitJniError();
+
+    return true;
+}
+
+bool java::JavaRuntime::CheckReference(jobject ref)
+{
+    return m_environment->GetObjectRefType(ref) != JNIInvalidRefType;
+}
+
+jobject java::JavaRuntime::GetStaticObjectField(ClassPath javaClass, std::string const& fieldName)
+{
+    jclass _class = m_environment->FindClass(javaClass.asString.c_str());
+
+    if (!_class)
+    {
+        SpitJniError();
+        std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.asString.c_str());
+        return false;
+    }
+
+    jfieldID id = m_environment->GetStaticFieldID(_class, fieldName.c_str(), TypeToJniStr(javaClass).c_str());
+    if (!id)
+    {
+        SpitJniError();
+        std::fprintf(stderr, "Failed to find static field: %s.%s!\n", javaClass.asString.c_str(), fieldName.c_str());
+        return nullptr;
+    }
+
+    jobject localRef = m_environment->GetStaticObjectField(_class, id);
+    if (!localRef)
+    {
+        SpitJniError();
+        std::fprintf(stderr, "Failed to find static field: %s.%s!\n", javaClass.asString.c_str(), fieldName.c_str());
+        return nullptr;
+    }
+
+    jobject result = m_environment->NewGlobalRef(localRef);
+    SpitJniError();
+
+    m_environment->DeleteLocalRef(localRef);
+    SpitJniError();
+
+    return result;
+}
+
 
 java::JavaRuntime::JavaRuntime(jint version, std::vector<std::string> jarPaths):
     m_javaVersion(version),
@@ -71,22 +152,4 @@ java::JavaRuntime::JavaRuntime(jint version, std::vector<std::string> jarPaths):
 java::JavaError::JavaError(std::string const& what):
     std::runtime_error(what)
 {
-}
-
-jobject java::JavaRuntime::CreateNewObject(ClassPath obj)
-{
-    jclass _class = m_environment->FindClass(obj.asString.c_str());
-
-    if (!_class)
-    {
-        SpitJniError();
-
-        std::fprintf(stderr, "Failed to find java class: %s!\n", obj.asString.c_str());
-        return nullptr;
-    }
-
-    jobject newObject = m_environment->AllocObject(_class);
-    SpitJniError();
-
-    return newObject;
 }

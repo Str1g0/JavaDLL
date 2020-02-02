@@ -48,6 +48,14 @@ namespace java
             void SpitJniError();
             bool CreateJVM();
 
+            jstring MakeJavaString(std::string const& in);
+
+            bool CallMain(ClassPath mainClass);
+
+            bool CheckReference(jobject ref);
+
+            jobject GetStaticObjectField(ClassPath javaClass, std::string const& fieldName);
+
             template<typename return_t, typename ...args_t>
             bool CallJavaMethod(return_t& result, ClassPath javaClass, std::string const& methodName, jobject object, args_t... args);
             template<typename return_t>
@@ -57,7 +65,7 @@ namespace java
             bool CallJavaVoidMethod(ClassPath javaClass, std::string const& methodName, jobject object, args_t... args);
 
             template<typename return_t, typename ...args_t>
-            bool CallClassPathMethod(return_t& result, ClassPath javaClass, std::string const& methodName, jobject object, args_t... args);
+            bool CallJavaObjectMethod(return_t& result, ClassPath javaClass, std::string const& methodName, jobject object, ClassPath objectType, args_t... args);
 
             template<typename ...args_t>
             bool CallJavaStringMethod(std::string& result, ClassPath javaClass, std::string const& methodName, jobject object,args_t... args);
@@ -74,7 +82,7 @@ namespace java
             bool CallJavaStaticVoidMethod(ClassPath javaClass, std::string const& methodName, args_t... args);
 
             template<typename return_t, typename ...args_t>
-            bool CallJavaStaticObjectMethod(return_t& result, ClassPath javaClass, std::string const& methodName, args_t... args);
+            bool CallJavaStaticObjectMethod(return_t& result, ClassPath javaClass, std::string const& methodName, ClassPath objectType, args_t... args);
 
             template<typename return_t, typename ...args_t>
             bool CallJavaStaticStringMethod(return_t& result, ClassPath javaClass, std::string const& methodName, args_t... args);
@@ -87,63 +95,9 @@ namespace java
             CALL_STATIC_JAVA_METHOD(Float);
             CALL_STATIC_JAVA_METHOD(Double);
 
-            jobject CreateNewObject(ClassPath obj);
+            template<typename ...args_t>
+            jobject CreateNewObject(ClassPath obj, args_t... args);
     };
-
-    template<typename return_t, typename ...args_t>
-    inline bool JavaRuntime::CallJavaMethod(return_t& result, ClassPath javaClass, std::string const& methodName, jobject object, args_t ...args)
-    {
-        jclass _class = m_environment->FindClass(javaClass.asString.c_str());
-
-        if (!_class)
-        {
-            SpitJniError();
-            std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.asString.c_str());
-            return false;
-        }
-
-        std::string methodArgs = MakeMethodArgsJniString(methodArgs, args...);
-        std::string signature = '(' + methodArgs + ')' + TypeToJniStr(result);
-
-        jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
-
-        if (!methodId)
-        {
-            SpitJniError();
-            std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.asString.c_str(), methodName.c_str());
-            return false;
-        }
-
-        return true;
-    }
-
-    template<typename return_t>
-    inline bool JavaRuntime::CallJavaMethod(return_t& result, ClassPath javaClass, std::string const& methodName, jobject object)
-    {
-        jclass _class = m_environment->FindClass(javaClass.asString.c_str());
-
-        if (!_class)
-        {
-            SpitJniError();
-
-            std::fprintf(stderr, "Failed to find java class: %s!\n", javaClass.asString.c_str());
-            return false;
-        }
-
-        std::string signature =  + TypeToJniStr(result);
-        jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
-
-        if (!methodId)
-        {
-            SpitJniError();
-            std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.asString.c_str(), methodName.c_str());
-            return false;
-        }
-
-        m_environment->CallVoidMethod(object, methodId);
-
-        return true;
-    }
     
     template<typename ...args_t>
     inline bool JavaRuntime::CallJavaVoidMethod(ClassPath javaClass, std::string const& methodName, jobject object, args_t... args)
@@ -171,14 +125,14 @@ namespace java
             return false;
         }
 
-        m_environment->CallVoidMethod(object, methodId);
+        m_environment->CallVoidMethod(object, methodId, args...);
         SpitJniError();
 
         return true;
     }
 
     template<typename return_t, typename ...args_t>
-    inline bool JavaRuntime::CallClassPathMethod(return_t& result, ClassPath javaClass, std::string const& methodName, jobject object, args_t ...args)
+    inline bool JavaRuntime::CallJavaObjectMethod(return_t& result, ClassPath javaClass, std::string const& methodName, jobject object, ClassPath objectType, args_t ...args)
     {
         jclass _class = m_environment->FindClass(javaClass.asString.c_str());
 
@@ -191,7 +145,8 @@ namespace java
         }
 
         std::string methodArgs = MakeMethodArgsJniString(args...);
-        std::string signature = '(' + methodArgs + ')' + TypeToJniStr(result);
+        methodArgs = "IILbattlefieldexplorer/generator/Terrain;";
+        std::string signature = '(' + methodArgs + ')' + TypeToJniStr(objectType);
 
         jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
 
@@ -203,7 +158,10 @@ namespace java
             return false;
         }
 
-        result = m_environment->CallObjectMethod(object, methodId, args...);
+        result = m_environment->CallObjectMethod(object, methodId, args...);//MakeJavaType(args)...);
+        SpitJniError();
+
+        result = m_environment->NewGlobalRef(result);
         SpitJniError();
 
         return true;
@@ -283,7 +241,7 @@ namespace java
     }
 
     template<typename return_t, typename ...args_t>
-    inline bool JavaRuntime::CallJavaStaticObjectMethod(return_t& result, ClassPath javaClass, std::string const& methodName, args_t ...args)
+    inline bool JavaRuntime::CallJavaStaticObjectMethod(return_t& result, ClassPath javaClass, std::string const& methodName, ClassPath objectType, args_t ...args)
     {
         jclass _class = m_environment->FindClass(javaClass.asString.c_str());
 
@@ -295,20 +253,25 @@ namespace java
             return false;
         }
 
-        std::string methodArgs = MakeMethodArgsJniString(methodArgs, args...);
-        std::string signature = '(' + methodArgs + ')' + TypeToJniStr(result);
+        std::string methodArgs = MakeMethodArgsJniString(args...);
+        std::string signature = '(' + methodArgs + ')' + TypeToJniStr(objectType);
 
-        jmethodID methodId = m_environment->GetMethodID(_class, methodName.c_str(), signature.c_str());
+        jmethodID methodId = m_environment->GetStaticMethodID(_class, methodName.c_str(), signature.c_str());
 
         if (!methodId)
         {
             SpitJniError();
-            std::fprintf(stderr, "Failed to find java method: %s.%s!\n", javaClass.asString.c_str(), methodName.c_str());
+            std::fprintf(stderr, "Failed to find java  method: %s.%s!\n", javaClass.asString.c_str(), methodName.c_str());
             return false;
         }
           
-        result = m_environment->CallJavaStaticObjectMethod(_class, methodId);
+        jobject localRef = m_environment->CallStaticObjectMethod(_class, methodId, MakeJavaType(args)...);
         SpitJniError();
+
+        result = m_environment->NewGlobalRef(localRef);
+        SpitJniError();
+
+        m_environment->DeleteLocalRef(localRef);
 
         return true;
     }
@@ -355,5 +318,23 @@ namespace java
         }
 
         return true;
+    }
+    template<typename ...args_t>
+    inline jobject JavaRuntime::CreateNewObject(ClassPath obj, args_t... args)
+    {
+        jclass _class = m_environment->FindClass(obj.asString.c_str());
+
+        if (!_class)
+        {
+            SpitJniError();
+
+            std::fprintf(stderr, "Failed to find java class: %s!\n", obj.asString.c_str());
+            return nullptr;
+        }
+
+        jobject newObject = m_environment->NewObject(_class, m_environment->GetMethodID("<init>"), args...);
+        SpitJniError();
+
+        return newObject;
     }
 }

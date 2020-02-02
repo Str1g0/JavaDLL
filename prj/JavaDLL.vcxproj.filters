@@ -5,6 +5,7 @@
     <ClInclude Include="..\src\JavaRuntime.hpp" />
     <ClInclude Include="..\src\JniFunction.hpp" />
     <ClInclude Include="..\src\Macros.hpp" />
+    <ClInclude Include="JavaWrappers.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Main.cpp" />

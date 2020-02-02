@@ -9,7 +9,19 @@ namespace java
         std::string asString;
     };
 
+    struct JavaObject 
+    {
+        ClassPath path;
+        jobject   object;
+    };
+
     static enum jvoid_t {} jvoid;
+
+    template<typename T, typename U = T>
+    U MakeJavaType(T param);
+
+    template<>
+    jobject MakeJavaType<JavaObject, jobject>(JavaObject param);
 
     template<typename T>
     std::string TypeToJniStr(T value);
@@ -51,6 +63,12 @@ namespace java
     std::string TypeToJniStr<jstring>(jstring value);
 
     template<>
+    std::string TypeToJniStr<jobject>(jobject value);
+
+    template<>
+    std::string TypeToJniStr<JavaObject>(JavaObject value);
+
+    template<>
     std::string TypeToJniStr<std::string>(std::string value);
 
     template<>
@@ -88,6 +106,12 @@ namespace java
     {
         static_assert("Unsupported value");
         return "";
+    }
+
+    template<typename T, typename U>
+    U MakeJavaType(T param)
+    {
+        return param;
     }
 
     template<typename T>
